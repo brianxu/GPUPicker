@@ -454,7 +454,7 @@ var THREE = THREE || {};
 			object.material.linewidth = linewidth + this.lineShell;//make the line a little wider to hit
 			object.material.setBaseID(baseId);
 			object.material.setPointSize(pointSize + this.pointShell);//make the point a little wider to hit
-			object.material.setPointScale(this.renderer.getSize().height/2);
+			object.material.setPointScale(this.renderer.getSize().height*this.renderer.getPixelRatio()/2);
 			return object.elementsCount;
 		}
 		return 0;
