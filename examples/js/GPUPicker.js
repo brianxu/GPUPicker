@@ -296,7 +296,6 @@ var THREE = THREE || {};
 
 	THREE.GPUPicker.prototype.pick = function(mouse, raycaster) {
 		this.update();
-		this.hitObject = undefined;
 		var index = mouse.x + (this.pickingTexture.height - mouse.y) * this.pickingTexture.width;
 		//interpret the pixel as an ID
 		var id = (this.pixelBuffer[index*4+2] * 255 * 255) + (this.pixelBuffer[index*4+1] * 255) + (this.pixelBuffer[index*4+0]);
@@ -323,8 +322,6 @@ var THREE = THREE || {};
 	THREE.GPUPicker.prototype._getObject = function(object, baseId, id) {
 		// if (this.debug) console.log("_getObject ",baseId);
 		if (object.elementsCount !== undefined && id >= baseId && id < baseId + object.elementsCount) {
-			//hit
-			this.hitObject = object;
 			return [baseId, object];
 		}
 		if (object.elementsCount !== undefined){
