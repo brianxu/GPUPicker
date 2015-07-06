@@ -245,8 +245,8 @@ var THREE = THREE || {};
 			this.setRenderer(option.renderer);
 		}
 
-		// buffer for reading single pixel
-		this.pixelBuffer = new Uint8Array(4);
+		// buffer for reading entire scene pixels
+		this.pixelBuffer = new Uint8Array(4 * this.pickingTexture.width * this.pickingTexture.height);
 		// array of original objects
 		this.container = [];
 		this.objectsMap = {};
@@ -270,6 +270,8 @@ var THREE = THREE || {};
 	THREE.GPUPicker.prototype.update = function() {
 		if (this.needUpdate){
 			this.renderer.render(this.pickingScene, this.camera, this.pickingTexture);
+			//read the rendering texture
+			this.renderer.readRenderTargetPixels(this.pickingTexture, 0, 0, this.pickingTexture.width, this.pickingTexture.height, this.pixelBuffer);
 			this.needUpdate = false;
 			if (this.debug) console.log("GPUPicker rendering updated");
 		}
@@ -295,10 +297,9 @@ var THREE = THREE || {};
 	THREE.GPUPicker.prototype.pick = function(mouse, raycaster) {
 		this.update();
 		this.hitObject = undefined;
-		//read the pixel under the mouse from the texture
-		this.renderer.readRenderTargetPixels(this.pickingTexture, mouse.x, this.pickingTexture.height - mouse.y, 1, 1, this.pixelBuffer);
+		var index = mouse.x + (this.pickingTexture.height - mouse.y) * this.pickingTexture.width;
 		//interpret the pixel as an ID
-		var id = (this.pixelBuffer[2] * 255 * 255) + (this.pixelBuffer[1] * 255) + (this.pixelBuffer[0]);
+		var id = (this.pixelBuffer[index*4+2] * 255 * 255) + (this.pixelBuffer[index*4+1] * 255) + (this.pixelBuffer[index*4+0]);
 		// get object with this id in range
 		// var object = this._getObject(id);
 		if (this.debug) console.log("pick id:",id);
