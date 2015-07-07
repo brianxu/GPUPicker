@@ -245,8 +245,6 @@ var THREE = THREE || {};
 			this.setRenderer(option.renderer);
 		}
 
-		// buffer for reading entire scene pixels
-		this.pixelBuffer = new Uint8Array(4 * this.pickingTexture.width * this.pickingTexture.height);
 		// array of original objects
 		this.container = [];
 		this.objectsMap = {};
@@ -256,11 +254,12 @@ var THREE = THREE || {};
 	THREE.GPUPicker.prototype.setRenderer = function(renderer) {
 		this.renderer = renderer;
 		var size = renderer.getSize();
-		this._resizeTexture(size.width, size.height);
+		this.resizeTexture(size.width, size.height);
 		this.needUpdate = true;
 	};
-	THREE.GPUPicker.prototype._resizeTexture = function(width, height) {
+	THREE.GPUPicker.prototype.resizeTexture = function(width, height) {
 		this.pickingTexture.setSize(width, height);
+		this.pixelBuffer = new Uint8Array(4 * width * height);
 		this.needUpdate = true;
 	};
 	THREE.GPUPicker.prototype.setCamera = function(camera) {
