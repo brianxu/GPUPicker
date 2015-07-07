@@ -503,6 +503,7 @@
 				camera.updateProjectionMatrix();
 
 				renderer.setSize( window.innerWidth, window.innerHeight );
+				gpuPicker.resizeTexture( window.innerWidth, window.innerHeight );
 				gpuPicker.needUpdate = true;
 			}
 
