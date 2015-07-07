@@ -438,7 +438,7 @@
 				renderer.sortObjects = false;
 				container.appendChild( renderer.domElement );
 
-				gpuPicker = new THREE.GPUPicker({renderer:renderer});
+				gpuPicker = new THREE.GPUPicker({renderer:renderer, debug: false});
 				gpuPicker.setFilter(function (object) {return true;});
 				gpuPicker.setScene(scene);
 				gpuPicker.setCamera(camera);
@@ -503,8 +503,7 @@
 				camera.updateProjectionMatrix();
 
 				renderer.setSize( window.innerWidth, window.innerHeight );
-				gpuPicker.setRenderer(renderer);
-				gpuPicker.update(camera);
+				gpuPicker.needUpdate = true;
 			}
 
 			function animate() {
