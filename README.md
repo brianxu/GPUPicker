@@ -66,4 +66,4 @@ When the scene changes, reset the scene.
 gpuPicker.setScene(scene);
 ```
 
-##[Example]()
+##[Example](http://brianxu.github.io/GPUPicker/)
