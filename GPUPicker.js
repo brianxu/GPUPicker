@@ -54,7 +54,6 @@ var THREE = THREE || {};
 					value: 400,
 				}
 			},
-			attributes: ["position", "id"],
 			vertexShader: FaceIDShader.vertexShader,
 			fragmentShader: FaceIDShader.fragmentShader
 
@@ -74,14 +73,24 @@ var THREE = THREE || {};
 
 	//add a originalObject to Object3D
 	(function(clone) {
-	  THREE.Object3D.prototype.clone = function ( object, recursive ) {
-	    object = clone.call(this,  object, recursive);
+	  THREE.Object3D.prototype.clone = function ( recursive ) {
+	    var object = clone.call(this, recursive);
 	    // keep a ref to originalObject
 		object.originalObject = this;
 		object.priority = this.priority;
 		return object;
 	  };
 	}(THREE.Object3D.prototype.clone));
+	//add a originalObject to Points
+	(function(clone) {
+	  THREE.Points.prototype.clone = function ( recursive ) {
+	    var object = clone.call(this, recursive);
+	    // keep a ref to originalObject
+		object.originalObject = this;
+		object.priority = this.priority;
+		return object;
+	  };
+	}(THREE.Points.prototype.clone));
 
 	THREE.Mesh.prototype.raycastWithID = ( function() {
 		var vA = new THREE.Vector3();
@@ -185,7 +194,7 @@ var THREE = THREE || {};
 
 	})();
 
-	THREE.PointCloud.prototype.raycastWithID = ( function () {
+	THREE.Points.prototype.raycastWithID = ( function () {
 
 		var inverseMatrix = new THREE.Matrix4();
 		var ray = new THREE.Ray();
@@ -235,8 +244,8 @@ var THREE = THREE || {};
 		}
 		this.pickingScene = new THREE.Scene();
 		this.pickingTexture = new THREE.WebGLRenderTarget();
-		this.pickingTexture.minFilter = THREE.LinearFilter;
-		this.pickingTexture.generateMipmaps = false;
+		this.pickingTexture.texture.minFilter = THREE.LinearFilter;
+		this.pickingTexture.texture.generateMipmaps = false;
 		this.lineShell = option.lineShell !== undefined ? option.lineShell:4;
 		this.pointShell = option.pointShell !== undefined ? option.pointShell:0.1;
 		this.debug = option.debug !== undefined ? option.debug:false;
@@ -366,7 +375,7 @@ var THREE = THREE || {};
 					__pickingGeometry = new THREE.BufferGeometry().setFromObject(object);
 				}
 				var units = 1;
-				if (object instanceof THREE.PointCloud) {
+				if (object instanceof THREE.Points) {
 					units = 1;
 				} else if (object instanceof THREE.Line) {
 					units = 2;
