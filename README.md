@@ -4,7 +4,7 @@
 The goal of this project is to implement a fast way to select an object in the scene for the [THREE.js WebGL library](http://mrdoob.github.com/three.js/).   
   
 ```html
-This build is built up on THREE.js ~r72dev
+This build is built up on THREE.js ~r92dev
 ```
 ## Features (+ [Example](http://brianxu.github.io/GPUPicker/))
 

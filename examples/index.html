@@ -1,535 +1,538 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<title>three.js webgl - gpu picking</title>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-		<style>
-			body {
-				font-family: Monospace;
-				background-color: #f0f0f0;
-				margin: 0px;
-				overflow: hidden;
-			}
 
-			.info {
-				position: absolute;
-				background-color: black;
-				opacity: 0.8;
-				color: white;
-				text-align: center;
-				top: 0px;
-				width: 100%;
-			}
+<head>
+	<title>three.js webgl - gpu picking</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<style>
+		body {
+			font-family: Monospace;
+			background-color: #f0f0f0;
+			margin: 0px;
+			overflow: hidden;
+		}
 
-			.info a {
-				color: #00ffff;
-			}
-		</style>
-	</head>
-	<body>
+		.info {
+			position: absolute;
+			background-color: black;
+			opacity: 0.8;
+			color: white;
+			text-align: center;
+			top: 0px;
+			width: 100%;
+		}
 
-		<div class="info">
-			<a href="https://github.com/brianxu/GPUPicker" target="_blank">GPUPicker</a> webgl - gpu picking by <a href="https://github.com/brianxu/GPUPicker" target="_blank"> baoxuan</a>
-			<br />use key 'g' to switch between GPUPicker and regular raycasting;
-			 use key 'd' to hide/show debug rendering
-		</div>
+		.info a {
+			color: #00ffff;
+		}
+	</style>
+</head>
 
-		<div id="container"></div>
+<body>
 
-		<script src="js/three.min.js"></script>
-		<script src="js/GPUPicker.js"></script>
-		<script src="js/controls/TrackballControls.js"></script>
+	<div class="info">
+		<a href="https://github.com/brianxu/GPUPicker" target="_blank">GPUPicker</a> webgl - gpu picking by
+		<a href="https://github.com/brianxu/GPUPicker" target="_blank"> baoxuan</a>
+		<br />use key 'g' to switch between GPUPicker and regular raycasting; use key 'd' to hide/show debug rendering
+	</div>
 
-		<script src="js/libs/stats.min.js"></script>
+	<div id="container"></div>
 
-		<script>
+	<script src="js/three.min.js"></script>
+	<script src="js/GPUPicker.js"></script>
+	<script src="js/controls/TrackballControls.js"></script>
 
-			var container, stats;
-			var camera, controls, scene, renderer;
+	<script src="js/libs/stats.min.js"></script>
 
-			var mouse = new THREE.Vector2();
-			var offset = new THREE.Vector3( 10, 10, 10 );
-			var raycaster = new THREE.Raycaster();
+	<script>
+
+		var container, stats;
+		var camera, controls, scene, renderer;
+
+		var mouse = new THREE.Vector2();
+		var offset = new THREE.Vector3(10, 10, 10);
+		var raycaster = new THREE.Raycaster();
 
 
-			var threshold = 0.1;
-			var pointSize = 0.25;
-			var width = 150;
-			var length = 150;
-			var rotateY = new THREE.Matrix4().makeRotationY( 0.005 );
+		var threshold = 0.1;
+		var pointSize = 0.25;
+		var width = 150;
+		var length = 150;
+		var rotateY = new THREE.Matrix4().makeRotationY(0.005);
 
-			var helper;
-			var gpuPicker;
-			var debug = false;
-			var useGPU = true;
+		var helper;
+		var gpuPicker;
+		var debug = false;
+		var useGPU = true;
 
-			function generatePointCloudGeometry( color, width, length, scale ){
+		function generatePointCloudGeometry(color, width, length, scale) {
 
-				var geometry = new THREE.BufferGeometry();
-				var numPoints = width*length;
+			var geometry = new THREE.BufferGeometry();
+			var numPoints = width * length;
 
-				var positions = new Float32Array( numPoints*3 );
-				var colors = new Float32Array( numPoints*3 );
+			var positions = new Float32Array(numPoints * 3);
+			var colors = new Float32Array(numPoints * 3);
 
-				var k = 0;
+			var k = 0;
 
-				for( var i = 0; i < width; i++ ) {
+			for (var i = 0; i < width; i++) {
 
-					for( var j = 0; j < length; j++ ) {
+				for (var j = 0; j < length; j++) {
 
-						var u = i / width;
-						var v = j / length;
-						var x = u - 0.5;
-						var y = ( Math.cos( u * Math.PI * 8 ) + Math.sin( v * Math.PI * 8 ) ) / 20;
-						var z = v - 0.5;
+					var u = i / width;
+					var v = j / length;
+					var x = u - 0.5;
+					var y = (Math.cos(u * Math.PI * 8) + Math.sin(v * Math.PI * 8)) / 20;
+					var z = v - 0.5;
 
-						positions[ 3 * k ] = x*scale;
-						positions[ 3 * k + 1 ] = y*scale;
-						positions[ 3 * k + 2 ] = z*scale;
+					positions[3 * k] = x * scale;
+					positions[3 * k + 1] = y * scale;
+					positions[3 * k + 2] = z * scale;
 
-						var intensity = ( y + 0.1 ) * 5;
-						colors[ 3 * k ] = color.r * intensity;
-						colors[ 3 * k + 1 ] = color.g * intensity;
-						colors[ 3 * k + 2 ] = color.b * intensity;
+					var intensity = (y + 0.1) * 5;
+					colors[3 * k] = color.r * intensity;
+					colors[3 * k + 1] = color.g * intensity;
+					colors[3 * k + 2] = color.b * intensity;
 
-						k++;
-
-					}
-
-				}
-
-				geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
-				geometry.addAttribute( 'color', new THREE.BufferAttribute( colors, 3 ) );
-				geometry.computeBoundingBox();
-
-				return geometry;
-
-			}
-
-			function generatePointcloud( color, width, length, scale ) {
-
-				var geometry = generatePointCloudGeometry( color, width, length, scale );
-
-				var material = new THREE.PointCloudMaterial( { size: pointSize, vertexColors: THREE.VertexColors } );
-				var pointcloud = new THREE.PointCloud( geometry, material );
-
-				return pointcloud;
-
-			}
-
-			function generateIndexedPointcloud( color, width, length, scale ) {
-
-				var geometry = generatePointCloudGeometry( color, width, length, scale );
-				var numPoints = width * length;
-				var indices = new Uint16Array( numPoints );
-
-				var k = 0;
-
-				for( var i = 0; i < width; i++ ) {
-
-					for( var j = 0; j < length; j++ ) {
-
-						indices[ k ] = k;
-						k++;
-
-					}
+					k++;
 
 				}
 
-				geometry.addAttribute( 'index', new THREE.BufferAttribute( indices, 1 ) );
+			}
 
-				var material = new THREE.PointCloudMaterial( { size: pointSize, vertexColors: THREE.VertexColors } );
-				var pointcloud = new THREE.PointCloud( geometry, material );
+			geometry.addAttribute('position', new THREE.BufferAttribute(positions, 3));
+			geometry.addAttribute('color', new THREE.BufferAttribute(colors, 3));
+			geometry.computeBoundingBox();
 
-				return pointcloud;
+			return geometry;
+
+		}
+
+		function generatePointcloud(color, width, length, scale) {
+
+			var geometry = generatePointCloudGeometry(color, width, length, scale);
+
+			var material = new THREE.PointsMaterial({ size: pointSize, vertexColors: THREE.VertexColors });
+			var pointcloud = new THREE.Points(geometry, material);
+
+			return pointcloud;
+
+		}
+
+		function generateIndexedPointcloud(color, width, length, scale) {
+
+			var geometry = generatePointCloudGeometry(color, width, length, scale);
+			var numPoints = width * length;
+			var indices = new Uint16Array(numPoints);
+
+			var k = 0;
+
+			for (var i = 0; i < width; i++) {
+
+				for (var j = 0; j < length; j++) {
+
+					indices[k] = k;
+					k++;
+
+				}
 
 			}
 
-			function generateIndexedWithOffsetPointcloud( color, width, length, scale ){
+			geometry.setIndex(new THREE.BufferAttribute(indices, 1));
 
-				var geometry = generatePointCloudGeometry( color, width, length, scale );
-				var numPoints = width * length;
-				var indices = new Uint16Array( numPoints );
+			var material = new THREE.PointsMaterial({ size: pointSize, vertexColors: THREE.VertexColors });
+			var pointcloud = new THREE.Points(geometry, material);
 
-				var k = 0;
+			return pointcloud;
 
-				for( var i = 0; i < width; i++ ){
+		}
 
-					for( var j = 0; j < length; j++ ) {
+		function generateIndexedWithOffsetPointcloud(color, width, length, scale) {
 
-						indices[ k ] = k;
-						k++;
+			var geometry = generatePointCloudGeometry(color, width, length, scale);
+			var numPoints = width * length;
+			var indices = new Uint16Array(numPoints);
 
-					}
+			var k = 0;
+
+			for (var i = 0; i < width; i++) {
+
+				for (var j = 0; j < length; j++) {
+
+					indices[k] = k;
+					k++;
 
 				}
-
-				geometry.addAttribute( 'index', new THREE.BufferAttribute( indices, 1 ) );
-
-				var offset = { start: 0, count: indices.length, index: 0 };
-				geometry.offsets.push( offset );
-
-				var material = new THREE.PointCloudMaterial( { size: pointSize, vertexColors: THREE.VertexColors } );
-				var pointcloud = new THREE.PointCloud( geometry, material );
-
-				return pointcloud;
 
 			}
 
-			function generateRegularPointcloud( color, width, length, scale ) {
+			geometry.setIndex(new THREE.BufferAttribute(indices, 1));
 
-				var geometry = new THREE.Geometry();
-				var numPoints = width * length;
+			var offset = { start: 0, count: indices.length, index: 0 };
+			geometry.groups.push(offset);
 
-				var colors = [];
+			var material = new THREE.PointsMaterial({ size: pointSize, vertexColors: THREE.VertexColors });
+			var pointcloud = new THREE.Points(geometry, material);
 
-				var k = 0;
+			return pointcloud;
 
-				for( var i = 0; i < width; i++ ) {
+		}
 
-					for( var j = 0; j < length; j++ ) {
+		function generateRegularPointcloud(color, width, length, scale) {
 
-						var u = i / width;
-						var v = j / length;
-						var x = u - 0.5;
-						var y = ( Math.cos( u * Math.PI * 8 ) + Math.sin( v * Math.PI * 8) ) / 20;
-						var z = v - 0.5;
-						var v = new THREE.Vector3( x*scale,y*scale,z*scale );
+			var geometry = new THREE.Geometry();
+			var numPoints = width * length;
 
-						var intensity = ( y + 0.1 ) * 7;
-						colors[ 3 * k ] = color.r * intensity;
-						colors[ 3 * k + 1 ] = color.g * intensity;
-						colors[ 3 * k + 2 ] = color.b * intensity;
+			var colors = [];
 
-						geometry.vertices.push( v );
-						colors[ k ] = ( color.clone().multiplyScalar( intensity ) );
+			var k = 0;
 
-						k++;
+			for (var i = 0; i < width; i++) {
 
-					}
+				for (var j = 0; j < length; j++) {
+
+					var u = i / width;
+					var v = j / length;
+					var x = u - 0.5;
+					var y = (Math.cos(u * Math.PI * 8) + Math.sin(v * Math.PI * 8)) / 20;
+					var z = v - 0.5;
+					var v = new THREE.Vector3(x * scale, y * scale, z * scale);
+
+					var intensity = (y + 0.1) * 7;
+					colors[3 * k] = color.r * intensity;
+					colors[3 * k + 1] = color.g * intensity;
+					colors[3 * k + 2] = color.b * intensity;
+
+					geometry.vertices.push(v);
+					colors[k] = (color.clone().multiplyScalar(intensity));
+
+					k++;
 
 				}
-
-				geometry.colors = colors;
-				geometry.computeBoundingBox();
-
-				var material = new THREE.PointCloudMaterial( { size: pointSize, vertexColors: THREE.VertexColors } );
-				var pointcloud = new THREE.PointCloud( geometry, material );
-
-				return pointcloud;
 
 			}
 
-			init();
-			animate();
+			geometry.colors = colors;
+			geometry.computeBoundingBox();
 
-			function init() {
+			var material = new THREE.PointsMaterial({ size: pointSize, vertexColors: THREE.VertexColors });
+			var pointcloud = new THREE.Points(geometry, material);
 
-				container = document.getElementById( "container" );
+			return pointcloud;
 
-				camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 10000 );
-				camera.position.z = 100;
+		}
 
-				controls = new THREE.TrackballControls( camera );
-				controls.rotateSpeed = 1.0;
-				controls.zoomSpeed = 1.2;
-				controls.panSpeed = 0.8;
-				controls.noZoom = false;
-				controls.noPan = false;
-				controls.staticMoving = true;
-				controls.dynamicDampingFactor = 0.3;
+		init();
+		animate();
 
-				scene = new THREE.Scene();
+		function init() {
 
-				pickingScene = new THREE.Scene();
-				pickingTexture = new THREE.WebGLRenderTarget( window.innerWidth, window.innerHeight );
-				pickingTexture.minFilter = THREE.LinearFilter;
-				pickingTexture.generateMipmaps = false;
+			container = document.getElementById("container");
 
-				scene.add( new THREE.AmbientLight( 0x555555 ) );
+			camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 10000);
+			camera.position.z = 100;
 
-				var light1 = new THREE.DirectionalLight( 0xffffff, 0.5 );
-				light1.position.set( 1, 1, 1 );
-				scene.add( light1 );
+			controls = new THREE.TrackballControls(camera);
+			controls.rotateSpeed = 1.0;
+			controls.zoomSpeed = 1.2;
+			controls.panSpeed = 0.8;
+			controls.noZoom = false;
+			controls.noPan = false;
+			controls.staticMoving = true;
+			controls.dynamicDampingFactor = 0.3;
 
-				// var light2 = new THREE.DirectionalLight( 0xffffff, 1.5 );
-				// light2.position.set( 0, -1, 0 );
-				// scene.add( light2 );
+			scene = new THREE.Scene();
 
-				// line
-				var geometry = new THREE.Geometry();
+			pickingScene = new THREE.Scene();
+			pickingTexture = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
+			pickingTexture.texture.minFilter = THREE.LinearFilter;
+			pickingTexture.texture.generateMipmaps = false;
 
-				var point = new THREE.Vector3();
-				var direction = new THREE.Vector3();
+			scene.add(new THREE.AmbientLight(0x555555));
 
-				for ( var i = 0; i < 50; i ++ ) {
+			var light1 = new THREE.DirectionalLight(0xffffff, 0.5);
+			light1.position.set(1, 1, 1);
+			scene.add(light1);
 
-					direction.x += Math.random() - 0.5;
-					direction.y += Math.random() - 0.5;
-					direction.z += Math.random() - 0.5;
-					direction.normalize().multiplyScalar( 2 );
+			// var light2 = new THREE.DirectionalLight( 0xffffff, 1.5 );
+			// light2.position.set( 0, -1, 0 );
+			// scene.add( light2 );
 
-					point.add( direction );
+			// line
+			var geometry = new THREE.Geometry();
 
-					geometry.vertices.push( point.clone() );
+			var point = new THREE.Vector3();
+			var direction = new THREE.Vector3();
 
-				}
+			for (var i = 0; i < 50; i++) {
 
-				parentTransform = new THREE.Object3D();
-				parentTransform.position.x = Math.random() * 4 - 2;
-				parentTransform.position.y = Math.random() * 4 - 2;
-				parentTransform.position.z = Math.random() * 4 - 2;
+				direction.x += Math.random() - 0.5;
+				direction.y += Math.random() - 0.5;
+				direction.z += Math.random() - 0.5;
+				direction.normalize().multiplyScalar(2);
 
-				parentTransform.rotation.x = Math.random() * 2 * Math.PI;
-				parentTransform.rotation.y = Math.random() * 2 * Math.PI;
-				parentTransform.rotation.z = Math.random() * 2 * Math.PI;
+				point.add(direction);
 
-				parentTransform.scale.x = Math.random() + 0.5;
-				parentTransform.scale.y = Math.random() + 0.5;
-				parentTransform.scale.z = Math.random() + 0.5;
+				geometry.vertices.push(point.clone());
 
-				for ( var i = 0; i < 1000; i ++ ) {
+			}
 
-					var object;
+			parentTransform = new THREE.Object3D();
+			parentTransform.position.x = Math.random() * 4 - 2;
+			parentTransform.position.y = Math.random() * 4 - 2;
+			parentTransform.position.z = Math.random() * 4 - 2;
 
-					if ( Math.random() > -1 ) {
+			parentTransform.rotation.x = Math.random() * 2 * Math.PI;
+			parentTransform.rotation.y = Math.random() * 2 * Math.PI;
+			parentTransform.rotation.z = Math.random() * 2 * Math.PI;
 
-						object = new THREE.Line( geometry );
+			parentTransform.scale.x = Math.random() + 0.5;
+			parentTransform.scale.y = Math.random() + 0.5;
+			parentTransform.scale.z = Math.random() + 0.5;
 
-					} else {
+			for (var i = 0; i < 1000; i++) {
 
-						object = new THREE.LineSegments( geometry );
+				var object;
 
-					}
+				if (Math.random() > -1) {
 
-					object.position.x = Math.random() * 400 - 200;
-					object.position.y = Math.random() * 400 - 200;
-					object.position.z = Math.random() * 400 - 200;
+					object = new THREE.Line(geometry);
 
-					object.rotation.x = Math.random() * 2 * Math.PI;
-					object.rotation.y = Math.random() * 2 * Math.PI;
-					object.rotation.z = Math.random() * 2 * Math.PI;
+				} else {
 
-					object.scale.x = Math.random() + 0.5;
-					object.scale.y = Math.random() + 0.5;
-					object.scale.z = Math.random() + 0.5;
-
-					parentTransform.add( object );
+					object = new THREE.LineSegments(geometry);
 
 				}
 
-				scene.add( parentTransform );
+				object.position.x = Math.random() * 400 - 200;
+				object.position.y = Math.random() * 400 - 200;
+				object.position.z = Math.random() * 400 - 200;
 
-				// box
-				geometry = new THREE.BoxGeometry(1,1,1);
-				for ( var i = 0; i < 1000; i ++ ) {
-					var material = new THREE.MeshPhongMaterial({color:Math.random() * 0xffffff, specular: 0xffffff, shininess: 250});
+				object.rotation.x = Math.random() * 2 * Math.PI;
+				object.rotation.y = Math.random() * 2 * Math.PI;
+				object.rotation.z = Math.random() * 2 * Math.PI;
 
-					var position = new THREE.Vector3();
-					position.x = Math.random() * 100 - 50;
-					position.y = Math.random() * 60 - 30;
-					position.z = Math.random() * 80 - 40;
+				object.scale.x = Math.random() + 0.5;
+				object.scale.y = Math.random() + 0.5;
+				object.scale.z = Math.random() + 0.5;
 
-					var rotation = new THREE.Euler();
-					rotation.x = Math.random() * 2 * Math.PI;
-					rotation.y = Math.random() * 2 * Math.PI;
-					rotation.z = Math.random() * 2 * Math.PI;
+				parentTransform.add(object);
 
-					var quaternion = new THREE.Quaternion();
-					quaternion.setFromEuler( rotation, false );
+			}
 
-					var scale = new THREE.Vector3();
-					scale.x = Math.random() * 2 + 1;
-					scale.y = Math.random() * 2 + 1;
-					scale.z = Math.random() * 2 + 1;
+			scene.add(parentTransform);
 
-					var mesh = new THREE.Mesh( geometry, material );
-					mesh.position.copy(position);
-					mesh.scale.copy(scale);
-					mesh.quaternion.copy(quaternion);
-					mesh.updateMatrixWorld();
-					mesh.priority = 1;
-					scene.add( mesh );
-				}
-				//sphere
-				geometry = new THREE.SphereBufferGeometry(1,32,32);
-				for ( var i = 0; i < 1000; i ++ ) {
-					var material = new THREE.MeshPhongMaterial({color:Math.random() * 0xffffff, specular: 0xffffff, shininess: 250});
+			// box
+			geometry = new THREE.BoxGeometry(1, 1, 1);
+			for (var i = 0; i < 1000; i++) {
+				var material = new THREE.MeshPhongMaterial({ color: Math.random() * 0xffffff, specular: 0xffffff, shininess: 250 });
 
-					var position = new THREE.Vector3();
-					position.x = Math.random() * 100 - 50;
-					position.y = Math.random() * 60 - 30;
-					position.z = Math.random() * 80 - 40;
+				var position = new THREE.Vector3();
+				position.x = Math.random() * 100 - 50;
+				position.y = Math.random() * 60 - 30;
+				position.z = Math.random() * 80 - 40;
 
-					var rotation = new THREE.Euler();
-					rotation.x = Math.random() * 2 * Math.PI;
-					rotation.y = Math.random() * 2 * Math.PI;
-					rotation.z = Math.random() * 2 * Math.PI;
+				var rotation = new THREE.Euler();
+				rotation.x = Math.random() * 2 * Math.PI;
+				rotation.y = Math.random() * 2 * Math.PI;
+				rotation.z = Math.random() * 2 * Math.PI;
 
-					var quaternion = new THREE.Quaternion();
-					quaternion.setFromEuler( rotation, false );
+				var quaternion = new THREE.Quaternion();
+				quaternion.setFromEuler(rotation, false);
 
-					var scale = new THREE.Vector3();
-					scale.x = Math.random() * 2 + 1;
-					scale.y = Math.random() * 2 + 1;
-					scale.z = Math.random() * 2 + 1;
+				var scale = new THREE.Vector3();
+				scale.x = Math.random() * 2 + 1;
+				scale.y = Math.random() * 2 + 1;
+				scale.z = Math.random() * 2 + 1;
 
-					var mesh = new THREE.Mesh( geometry, material );
-					mesh.position.copy(position);
-					mesh.scale.copy(scale);
-					mesh.quaternion.copy(quaternion);
-					mesh.updateMatrixWorld();
-					mesh.priority = 1;
-					scene.add( mesh );
-				}
-				//loaded mesh
-				var loader = new THREE.JSONLoader();
-				loader.load( 'obj/lucy/Lucy100k_slim.js', function ( geometry ) {
-					var material = new THREE.MeshPhongMaterial({color:Math.random() * 0xffffff, specular: 0xffffff, shininess: 250});
+				var mesh = new THREE.Mesh(geometry, material);
+				mesh.position.copy(position);
+				mesh.scale.copy(scale);
+				mesh.quaternion.copy(quaternion);
+				mesh.updateMatrixWorld();
+				mesh.priority = 1;
+				scene.add(mesh);
+			}
+			//sphere
+			geometry = new THREE.SphereBufferGeometry(1, 32, 32);
+			for (var i = 0; i < 1000; i++) {
+				var material = new THREE.MeshPhongMaterial({ color: Math.random() * 0xffffff, specular: 0xffffff, shininess: 250 });
 
-					var mesh = new THREE.Mesh( geometry, material );
-					var scale = new THREE.Vector3(0.1, 0.1, 0.1);
-					mesh.scale.copy(scale);
-					scene.add( mesh );
+				var position = new THREE.Vector3();
+				position.x = Math.random() * 100 - 50;
+				position.y = Math.random() * 60 - 30;
+				position.z = Math.random() * 80 - 40;
 
+				var rotation = new THREE.Euler();
+				rotation.x = Math.random() * 2 * Math.PI;
+				rotation.y = Math.random() * 2 * Math.PI;
+				rotation.z = Math.random() * 2 * Math.PI;
 
-					for (var i = 0; i < 10; i++) {
-						var mesh1 = mesh.clone();
-						mesh1.position = new THREE.Vector3();
-						mesh1.position.x = Math.random() * 100 - 50;
-						mesh1.position.z = Math.random() * 80 - 40;
-						scene.add( mesh1 );
-					};
-					gpuPicker.setScene(scene);
-				} );
+				var quaternion = new THREE.Quaternion();
+				quaternion.setFromEuler(rotation, false);
 
-				// points
-				pcBuffer = generatePointcloud( new THREE.Color( 1,0,0 ), width, length, 5 );
-				pcBuffer.scale.set( 10,10,10 );
-				pcBuffer.position.set( -25,0,25 );
-				scene.add( pcBuffer );
+				var scale = new THREE.Vector3();
+				scale.x = Math.random() * 2 + 1;
+				scale.y = Math.random() * 2 + 1;
+				scale.z = Math.random() * 2 + 1;
 
-				var pcIndexed = generateIndexedPointcloud( new THREE.Color( 0,1,0 ), width, length, 5 );
-				pcIndexed.scale.set( 10,10,10 );
-				pcIndexed.position.set( 25,0,25 );
-				scene.add( pcIndexed );
+				var mesh = new THREE.Mesh(geometry, material);
+				mesh.position.copy(position);
+				mesh.scale.copy(scale);
+				mesh.quaternion.copy(quaternion);
+				mesh.updateMatrixWorld();
+				mesh.priority = 1;
+				scene.add(mesh);
+			}
+			//loaded mesh
+			var loader = new THREE.JSONLoader();
+			loader.load('obj/lucy/Lucy100k_slim.js', function (geometry) {
+				var material = new THREE.MeshPhongMaterial({ color: Math.random() * 0xffffff, specular: 0xffffff, shininess: 250 });
 
-				var pcIndexedOffset = generateIndexedWithOffsetPointcloud( new THREE.Color( 0,1,1 ), width, length, 5 );
-				pcIndexedOffset.scale.set( 10,10,10 );
-				pcIndexedOffset.position.set( 25,0,-25 );
-				scene.add( pcIndexedOffset );
-
-				var pcRegular = generateRegularPointcloud( new THREE.Color( 1,0,1 ), width, length, 5 );
-				pcRegular.scale.set( 10,10,10 );
-				pcRegular.position.set( -25,0,-25 );
-				scene.add( pcRegular );
-
-				var geometry = new THREE.CylinderGeometry( 0, 0.8, 5);
-				geometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, -2.5, 0 ) );
-				geometry.applyMatrix( new THREE.Matrix4().makeRotationX( -Math.PI / 2 ) );
-				helper = new THREE.Mesh( geometry, new THREE.MeshPhongMaterial({color:0xFFD700}) );
+				var mesh = new THREE.Mesh(geometry, material);
+				var scale = new THREE.Vector3(0.1, 0.1, 0.1);
+				mesh.scale.copy(scale);
+				scene.add(mesh);
 
 
-				renderer = new THREE.WebGLRenderer( { antialias: true } );
-				renderer.setClearColor( 0xaaaaaa );
-				renderer.setPixelRatio( window.devicePixelRatio );
-				renderer.setSize( window.innerWidth, window.innerHeight );
-				renderer.sortObjects = false;
-				container.appendChild( renderer.domElement );
-
-				gpuPicker = new THREE.GPUPicker({renderer:renderer, debug: false});
-				gpuPicker.setFilter(function (object) {return true;});
+				for (var i = 0; i < 10; i++) {
+					var mesh1 = mesh.clone();
+					mesh1.position = new THREE.Vector3();
+					mesh1.position.x = Math.random() * 100 - 50;
+					mesh1.position.z = Math.random() * 80 - 40;
+					scene.add(mesh1);
+				};
 				gpuPicker.setScene(scene);
-				gpuPicker.setCamera(camera);
-				scene.add( helper );
+			});
 
-				stats = new Stats();
-				stats.domElement.style.position = 'absolute';
-				stats.domElement.style.top = '0px';
-				container.appendChild( stats.domElement );
+			// points
+			pcBuffer = generatePointcloud(new THREE.Color(1, 0, 0), width, length, 5);
+			pcBuffer.scale.set(10, 10, 10);
+			pcBuffer.position.set(-25, 0, 25);
+			scene.add(pcBuffer);
 
-				renderer.domElement.addEventListener( 'mousemove', onMouseMove );
+			var pcIndexed = generateIndexedPointcloud(new THREE.Color(0, 1, 0), width, length, 5);
+			pcIndexed.scale.set(10, 10, 10);
+			pcIndexed.position.set(25, 0, 25);
+			scene.add(pcIndexed);
 
-				controls.addEventListener('end', updateGPUPicker);
-				window.addEventListener( "keypress", HandleKeyDown, false );
-				window.addEventListener( "resize", onWindowResize, false );
+			var pcIndexedOffset = generateIndexedWithOffsetPointcloud(new THREE.Color(0, 1, 1), width, length, 5);
+			pcIndexedOffset.scale.set(10, 10, 10);
+			pcIndexedOffset.position.set(25, 0, -25);
+			scene.add(pcIndexedOffset);
+
+			var pcRegular = generateRegularPointcloud(new THREE.Color(1, 0, 1), width, length, 5);
+			pcRegular.scale.set(10, 10, 10);
+			pcRegular.position.set(-25, 0, -25);
+			scene.add(pcRegular);
+
+			var geometry = new THREE.CylinderGeometry(0, 0.8, 5);
+			geometry.applyMatrix(new THREE.Matrix4().makeTranslation(0, -2.5, 0));
+			geometry.applyMatrix(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
+			helper = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({ color: 0xFFD700 }));
+
+
+			renderer = new THREE.WebGLRenderer({ antialias: true });
+			renderer.setClearColor(0xaaaaaa);
+			renderer.setPixelRatio(window.devicePixelRatio);
+			renderer.setSize(window.innerWidth, window.innerHeight);
+			renderer.sortObjects = false;
+			container.appendChild(renderer.domElement);
+
+			gpuPicker = new THREE.GPUPicker({ renderer: renderer, debug: false });
+			gpuPicker.setFilter(function (object) { return true; });
+			gpuPicker.setScene(scene);
+			gpuPicker.setCamera(camera);
+			scene.add(helper);
+
+			stats = new Stats();
+			stats.domElement.style.position = 'absolute';
+			stats.domElement.style.top = '0px';
+			container.appendChild(stats.domElement);
+
+			renderer.domElement.addEventListener('mousemove', onMouseMove);
+
+			controls.addEventListener('end', updateGPUPicker);
+			window.addEventListener("keypress", HandleKeyDown, false);
+			window.addEventListener("resize", onWindowResize, false);
+		}
+
+		function HandleKeyDown(e) {
+			var keyCode = e.keyCode;
+			if (keyCode == 100) {
+				debug = !debug;
+			}
+			if (keyCode == 103) {
+				useGPU = !useGPU;
+			}
+		}
+
+		function onMouseMove(e) {
+			if (e.which != 0)
+				return;
+			mouse.x = e.clientX;
+			mouse.y = e.clientY;
+			var raymouse = new THREE.Vector2();
+			raymouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+			raymouse.y = - (e.clientY / window.innerHeight) * 2 + 1;
+			raycaster.setFromCamera(raymouse, camera);
+			var intersect;
+			if (useGPU) {
+				intersect = gpuPicker.pick(mouse, raycaster);
+			} else {
+				intersect = raycaster.intersectObject(scene, true)[0];
 			}
 
-			function HandleKeyDown (e) {
-			  var keyCode = e.keyCode;
-			  if (keyCode == 100){
-			  	debug = !debug;
-			  }
-			  if (keyCode == 103){
-			  	useGPU = !useGPU;
-			  }
-			}
-
-			function onMouseMove( e ) {
-				if(e.which != 0)
-					return;
-				mouse.x = e.clientX;
-				mouse.y = e.clientY;
-				var raymouse = new THREE.Vector2();
-				raymouse.x = ( e.clientX / window.innerWidth ) * 2 - 1;
-				raymouse.y = - ( e.clientY / window.innerHeight ) * 2 + 1;
-				raycaster.setFromCamera( raymouse, camera );
-				var intersect;
-				if(useGPU){
-					intersect = gpuPicker.pick(mouse, raycaster);
-				} else {
-					intersect = raycaster.intersectObject(scene, true)[0];
+			if (intersect) {
+				helper.position.set(0, 0, 0);
+				if (intersect.face) {
+					var normalMatrix = new THREE.Matrix3().getNormalMatrix(intersect.object.matrixWorld);
+					var worldNormal = intersect.face.normal.clone().applyMatrix3(normalMatrix).normalize();
+					helper.lookAt(worldNormal);
 				}
 
-				if (intersect) {
-					helper.position.set( 0, 0, 0 );
-					if (intersect.face) {
-						var normalMatrix = new THREE.Matrix3().getNormalMatrix( intersect.object.matrixWorld );
-      			var worldNormal = intersect.face.normal.clone().applyMatrix3( normalMatrix ).normalize();
-						helper.lookAt( worldNormal );
-					}
-
-					helper.position.copy( intersect.point );
-				}
+				helper.position.copy(intersect.point);
 			}
-			function updateGPUPicker (){
-				gpuPicker.needUpdate = true;
-			}
+		}
+		function updateGPUPicker() {
+			gpuPicker.needUpdate = true;
+		}
 
-			function onWindowResize() {
+		function onWindowResize() {
 
-				camera.aspect = window.innerWidth / window.innerHeight;
-				camera.updateProjectionMatrix();
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
 
-				renderer.setSize( window.innerWidth, window.innerHeight );
-				gpuPicker.resizeTexture( window.innerWidth, window.innerHeight );
-				gpuPicker.needUpdate = true;
-			}
+			renderer.setSize(window.innerWidth, window.innerHeight);
+			gpuPicker.resizeTexture(window.innerWidth, window.innerHeight);
+			gpuPicker.needUpdate = true;
+		}
 
-			function animate() {
+		function animate() {
 
-				requestAnimationFrame( animate );
+			requestAnimationFrame(animate);
 
-				render();
-				stats.update();
+			render();
+			stats.update();
 
-			}
+		}
 
-			function render() {
+		function render() {
 
-				controls.update();
+			controls.update();
 
 
-				if(debug){
-					renderer.render( gpuPicker.pickingScene, camera );
-				} else {
-					renderer.render( scene, camera );
-				}
-
+			if (debug) {
+				renderer.render(gpuPicker.pickingScene, camera);
+			} else {
+				renderer.render(scene, camera);
 			}
 
-		</script>
+		}
 
-	</body>
+	</script>
+
+</body>
+
 </html>
